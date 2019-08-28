@@ -122,3 +122,8 @@ def format_search_filters(ldap_fields):
         for field_name, field_value
         in ldap_fields.items()
     ]
+
+
+def search_extra_attr(ldap_connection, user_data):
+    # do nothing by default
+    pass

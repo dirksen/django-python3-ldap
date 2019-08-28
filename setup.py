@@ -18,6 +18,7 @@ setup(
     install_requires=[
         "django>=1.8",
         "ldap3>=2.5,<3",
+        "ldif3>=3.2.2",
         "pyasn1>=0.4.6,<0.5",
     ],
     classifiers=[

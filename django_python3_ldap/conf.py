@@ -80,6 +80,11 @@ class LazySettings(object):
         default="django_python3_ldap.utils.format_search_filters",
     )
 
+    LDAP_AUTH_EXTRA_ATTR = LazySetting(
+        name="LDAP_AUTH_EXTRA_ATTR",
+        default="django_python3_ldap.utils.search_extra_attr",
+    )
+
     LDAP_AUTH_SYNC_USER_RELATIONS = LazySetting(
         name="LDAP_AUTH_SYNC_USER_RELATIONS",
         default="django_python3_ldap.utils.sync_user_relations",
@@ -124,6 +129,10 @@ class LazySettings(object):
         name="LDAP_AUTH_RECEIVE_TIMEOUT",
         default=None
     )
+
+    # Settings for running from a LDIF file
+
+    LDAP_AUTH_LDIF = LazySetting(name="LDAP_AUTH_LDIF", default=None)
 
 
 settings = LazySettings(settings)

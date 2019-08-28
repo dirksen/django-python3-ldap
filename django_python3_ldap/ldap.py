@@ -2,8 +2,9 @@
 Low-level LDAP hooks.
 """
 
-import ldap3
-from ldap3.core.exceptions import LDAPException
+import ldap3, re
+from ldif3 import LDIFParser
+from ldap3.core.exceptions import LDAPException, LDAPInvalidCredentialsResult
 import logging
 from contextlib import contextmanager
 from django.contrib.auth import get_user_model
@@ -70,11 +71,17 @@ class Connection(object):
         if created:
             user.set_unusable_password()
             user.save()
+
+	# Perform extra search for additional attributes
+        import_func(settings.LDAP_AUTH_EXTRA_ATTR)(self._connection, user_data)
+
         # Update relations
         import_func(settings.LDAP_AUTH_SYNC_USER_RELATIONS)(user, attributes)
+
         # All done!
         logger.info("LDAP user lookup succeeded")
         return user
+
 
     def iter_users(self):
         """
@@ -143,21 +150,40 @@ def connection(**kwargs):
         auto_bind = ldap3.AUTO_BIND_TLS_BEFORE_BIND
     else:
         auto_bind = ldap3.AUTO_BIND_NO_TLS
+
     # Connect.
     try:
-        c = ldap3.Connection(
-            ldap3.Server(
-                settings.LDAP_AUTH_URL,
-                allowed_referral_hosts=[("*", True)],
-                get_info=ldap3.NONE,
-                connect_timeout=settings.LDAP_AUTH_CONNECT_TIMEOUT,
-            ),
-            user=username,
-            password=password,
-            auto_bind=auto_bind,
-            raise_exceptions=True,
-            receive_timeout=settings.LDAP_AUTH_RECEIVE_TIMEOUT,
-        )
+        assert settings.LDAP_AUTH_LDIF
+        if settings.LDAP_AUTH_LDIF:
+            c = ldap3.Connection(
+                "mock_server",
+                user=username,
+                password=password,
+                client_strategy=ldap3.MOCK_SYNC,
+                raise_exceptions=True,
+            )
+            # Load entries from LDIF file
+            parser = LDIFParser(open(settings.LDAP_AUTH_LDIF, "rb"))
+            for dn, entry in parser.parse():
+                c.strategy.add_entry(dn, entry)
+            # Per https://ldap3.readthedocs.io/mocking.html:
+            # "You cannot use the auto_bind parameter because the DIT is populated after the creation of the Connection object."
+            # Bind manually
+            c.bind()
+        else:
+            c = ldap3.Connection(
+                ldap3.Server(
+                    settings.LDAP_AUTH_URL,
+                    allowed_referral_hosts=[("*", True)],
+                    get_info=ldap3.NONE,
+                    connect_timeout=settings.LDAP_AUTH_CONNECT_TIMEOUT,
+                ),
+                user=username,
+                password=password,
+                auto_bind=auto_bind,
+                raise_exceptions=True,
+                receive_timeout=settings.LDAP_AUTH_RECEIVE_TIMEOUT,
+            )
     except LDAPException as ex:
         logger.warning("LDAP connect failed: {ex}".format(ex=ex))
         yield None
