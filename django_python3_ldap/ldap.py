@@ -2,9 +2,9 @@
 Low-level LDAP hooks.
 """
 
-import ldap3, re
+import ldap3
 from ldif3 import LDIFParser
-from ldap3.core.exceptions import LDAPException, LDAPInvalidCredentialsResult
+from ldap3.core.exceptions import LDAPException
 import logging
 from contextlib import contextmanager
 from django.contrib.auth import get_user_model
@@ -72,7 +72,7 @@ class Connection(object):
             user.set_unusable_password()
             user.save()
 
-	# Perform extra search for additional attributes
+        # Perform extra search for additional attributes
         import_func(settings.LDAP_AUTH_EXTRA_ATTR)(self._connection, user_data)
 
         # Update relations
@@ -81,7 +81,6 @@ class Connection(object):
         # All done!
         logger.info("LDAP user lookup succeeded")
         return user
-
 
     def iter_users(self):
         """
@@ -167,7 +166,8 @@ def connection(**kwargs):
             for dn, entry in parser.parse():
                 c.strategy.add_entry(dn, entry)
             # Per https://ldap3.readthedocs.io/mocking.html:
-            # "You cannot use the auto_bind parameter because the DIT is populated after the creation of the Connection object."
+            # "You cannot use the auto_bind parameter because the DIT is
+            #  populated after the creation of the Connection object."
             # Bind manually
             c.bind()
         else:
